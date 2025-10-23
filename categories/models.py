@@ -31,27 +31,27 @@ class Category(models.Model):
 
     def save(self, *args, **kwargs):
         is_new = self.pk is None
-        parent_before = None if is_new else Category.objects.filter(pk=self.pk).values_list("parent_id",
-                                                                                            flat=True).first()
-        super().save(*args, **kwargs)  # need PK
 
-        # guard: cannot parent under own subtree
+        if is_new:
+            parent_before = None
+        else:
+            parent_before = Category.objects.only("parent_id") \
+                .filter(pk=self.pk) \
+                .values_list("parent_id", flat=True) \
+                .first()
+
+        super().save(*args, **kwargs)
+
         if self.parent and str(self.pk) in (self.parent.path or ""):
             raise ValueError("Cannot move a node under its own subtree.")
 
-        # update self path/depth
         depth, path = self._compute_depth_and_path(self.parent)
         if self.depth != depth or self.path != path:
             Category.objects.filter(pk=self.pk).update(depth=depth, path=path)
             self.depth, self.path = depth, path
 
-        # if parent changed or new, update descendants in bulk
-        if is_new or parent_before != self.parent_id:
-            old_prefix = None  # on create we don’t have old path
-            new_prefix = self.path
+        if parent_before != self.parent_id:
             with transaction.atomic():
-                descendants = Category.objects.filter(path__startswith=new_prefix).exclude(pk=self.pk)
-                # recompute depth/path for descendants
                 for child in self.children.all().order_by("depth"):
                     child._cascade_repath()
 

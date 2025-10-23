@@ -71,10 +71,10 @@ class Command(BaseCommand):
         id_to_name = dict(Category.objects.values_list("id", "name"))
         def pretty(ids): return " -> ".join(f"{id_to_name.get(i,'?')}({i})" for i in ids)
 
-        self.stdout.write("Longest rabbit hole:")
-        self.stdout.write(pretty(best_path))
+        print("Longest rabbit hole:")
+        print(pretty(best_path))
 
-        self.stdout.write("\nRabbit islands:")
+        print("\nRabbit islands:")
         for comp in islands:
             line = ", ".join(f"{id_to_name.get(i,'?')}({i})" for i in comp)
-            self.stdout.write(f"- {line}")
+            print(f"- {line}")
